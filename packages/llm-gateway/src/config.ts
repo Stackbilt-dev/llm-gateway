@@ -14,11 +14,11 @@ const defaultConfig: GatewayConfig = {
     shadowMode: true, // log would-route but always route to Anthropic until validated
     routes: {
       tool_loop: ["anthropic", "openai"],
-      long_context: ["anthropic", "openai"],
+      long_context: ["anthropic", "groq", "openai"],  // groq has 128k ctx — fallback when Anthropic has no credits
       planning: ["groq", "cerebras"],
       code_draft: ["groq", "cerebras"],
       summary: ["cerebras", "groq", "cloudflare"],
-      fallback_safe: ["anthropic", "openai"],
+      fallback_safe: ["groq", "cerebras", "anthropic", "openai"],  // avoid dead-end Anthropic-only routes
     },
   },
   cache: {

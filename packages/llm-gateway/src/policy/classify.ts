@@ -17,12 +17,13 @@ const CODE_SIGNALS = [
   "component that", "add a", "build a",
 ];
 
-// 1 token ≈ 4 chars (rough)
+// 1 token ≈ 4 chars (rough). Exclude tool schemas — Claude Code sends 50+ tools
+// on every request, inflating the estimate and falsely triggering long_context.
+// We strip tools before forwarding to cheap providers anyway.
 function estimateInputTokens(request: LLMRequest): number {
   const text = [
     request.system ?? "",
     ...request.messages.map((m) => m.content),
-    ...(request.tools ?? []).map((t) => t.name + (t.description ?? "")),
   ].join("\n");
   return Math.ceil(text.length / 4);
 }
