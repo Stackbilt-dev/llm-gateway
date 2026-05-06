@@ -1,0 +1,11 @@
+{"version":1,"timestamp":"2026-05-05T23:27:28.094Z","commandPath":"quickstart","flags":["--version"],"format":"text","ciMode":false,"durationMs":2,"exitCode":0,"success":true}
+{"version":1,"timestamp":"2026-05-05T23:27:37.702Z","commandPath":"bootstrap","flags":["--yes"],"format":"text","ciMode":false,"durationMs":820,"exitCode":0,"success":true}
+{"version":1,"timestamp":"2026-05-05T23:27:52.698Z","commandPath":"doctor","flags":[],"format":"text","ciMode":false,"durationMs":63,"exitCode":0,"success":true}
+{"version":1,"timestamp":"2026-05-05T23:28:29.055Z","commandPath":"setup","flags":["--preset","--ci","--yes"],"format":"text","ciMode":true,"durationMs":39,"exitCode":0,"success":true}
+{"version":1,"timestamp":"2026-05-05T23:34:45.663Z","commandPath":"hook.install","flags":["--commit-msg"],"format":"text","ciMode":false,"durationMs":34,"exitCode":2,"success":false,"errorName":"Error"}
+{"version":1,"timestamp":"2026-05-05T23:39:55.985Z","commandPath":"hook.install","flags":["--commit-msg"],"format":"text","ciMode":false,"durationMs":66,"exitCode":0,"success":true}
+{"version":1,"timestamp":"2026-05-05T23:40:12.830Z","commandPath":"hook.install","flags":["--pre-commit"],"format":"text","ciMode":false,"durationMs":63,"exitCode":0,"success":true}
+{"version":1,"timestamp":"2026-05-05T23:40:26.621Z","commandPath":"doctor","flags":[],"format":"text","ciMode":false,"durationMs":62,"exitCode":0,"success":true}
+{"version":1,"timestamp":"2026-05-05T23:46:54.897Z","commandPath":"doctor","flags":[],"format":"text","ciMode":false,"durationMs":70,"exitCode":0,"success":true}
+{"version":1,"timestamp":"2026-05-05T23:48:44.415Z","commandPath":"doctor","flags":[],"format":"text","ciMode":false,"durationMs":58,"exitCode":0,"success":true}
+{"version":1,"timestamp":"2026-05-06T00:25:50.704Z","commandPath":"doctor","flags":[],"format":"text","ciMode":false,"durationMs":58,"exitCode":0,"success":true}
