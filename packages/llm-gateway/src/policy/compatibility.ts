@@ -51,18 +51,28 @@ export function selectCompatibleProvider(
 ): string {
   const needsTools = Boolean(request.tools?.length);
 
-  const valid = defaultCompatibilityRegistry.filter((entry) => {
-    if (!candidates.includes(entry.provider)) return false;
-    if (needsTools && !entry.tools) return false;
+  // Walk candidates in the order specified by the route config — first compatible wins.
+  // This ensures the gateway respects preferred provider ordering (e.g. groq before anthropic).
+  for (const candidate of candidates) {
+    const entry = defaultCompatibilityRegistry.find((e) => e.provider === candidate);
+    if (!entry) continue;
+    if (needsTools && !entry.tools) continue;
 
     const clientSafe = client === "claude-code" ? entry.claudeCodeSafe : entry.codexSafe;
-    if (clientSafe === true) return true;
-    return clientSafe === "experimental" && experimentalModels;
-  });
+    if (clientSafe === true || (clientSafe === "experimental" && experimentalModels)) {
+      return candidate;
+    }
+  }
 
-  if (valid.length > 0) return valid[0].provider;
-  // Tool-capable fallback: if we need tools and nothing compatible, go to Anthropic
+  // Fallback: if experimentalModels=false filtered everything out, accept experimental providers
+  for (const candidate of candidates) {
+    const entry = defaultCompatibilityRegistry.find((e) => e.provider === candidate);
+    if (!entry) continue;
+    if (needsTools && !entry.tools) continue;
+    return candidate;
+  }
+
+  // Last resort
   if (needsTools) return "anthropic";
-  // Otherwise take the first candidate
   return candidates[0] ?? "anthropic";
 }
