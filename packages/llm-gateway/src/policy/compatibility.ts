@@ -27,9 +27,9 @@ export const defaultCompatibilityRegistry: ModelCompatibility[] = [
   },
   {
     provider: "cerebras",
-    model: "qwen-3-235b",
+    model: "zai-glm-4.7",
     streaming: true,
-    tools: false,
+    tools: true,
     claudeCodeSafe: "experimental",
     codexSafe: "experimental",
   },

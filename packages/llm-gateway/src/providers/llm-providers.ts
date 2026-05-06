@@ -246,16 +246,17 @@ class GatewayProviderClient implements ProviderClient {
     };
 
     const cheapProviders = new Set<ProviderName>(["groq", "cerebras", "cloudflare"]);
-    if (preferredProviderName && (cheapProviders.has(preferredProviderName) || !providerRequest.model)) {
-      const providersModule = await loadProvidersModule();
-      providerRequest.model = providersModule.getProviderDefaultModel(preferredProviderName, providerRequest);
-    }
 
-    // Cheap providers can't execute Claude Code's tools — strip them so the model
-    // generates a text response instead of emitting empty tool-call deltas.
+    // Strip tools BEFORE model override so getProviderDefaultModel infers BALANCED
+    // (not TOOL_CALLING), which picks a text model rather than a tool-calling specialist.
     if (preferredProviderName && cheapProviders.has(preferredProviderName)) {
       providerRequest.tools = undefined;
       providerRequest.toolChoice = undefined;
+    }
+
+    if (preferredProviderName && (cheapProviders.has(preferredProviderName) || !providerRequest.model)) {
+      const providersModule = await loadProvidersModule();
+      providerRequest.model = providersModule.getProviderDefaultModel(preferredProviderName, providerRequest);
     }
 
     return providerRequest;
