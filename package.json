@@ -10,6 +10,7 @@
     "typecheck": "npm run -w @stackbilt/llm-gateway typecheck",
     "start": "bash start-gateway.sh",
     "start:bg": "bash start-gateway.sh &",
+    "claude": "bash claude-gateway.sh",
     "charter:detect": "charter setup --detect-only --format json",
     "charter:setup": "charter setup --preset backend --ci github --yes",
     "verify:adf": "charter doctor --adf-only --ci --format json && charter adf evidence --auto-measure --ci --format json",
