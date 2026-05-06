@@ -251,6 +251,13 @@ class GatewayProviderClient implements ProviderClient {
       providerRequest.model = providersModule.getProviderDefaultModel(preferredProviderName, providerRequest);
     }
 
+    // Cheap providers can't execute Claude Code's tools — strip them so the model
+    // generates a text response instead of emitting empty tool-call deltas.
+    if (preferredProviderName && cheapProviders.has(preferredProviderName)) {
+      providerRequest.tools = undefined;
+      providerRequest.toolChoice = undefined;
+    }
+
     return providerRequest;
   }
 

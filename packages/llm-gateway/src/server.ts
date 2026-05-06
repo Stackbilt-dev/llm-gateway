@@ -145,15 +145,23 @@ async function executeRequest(params: {
   const classifiedRoute = classifyRequest(params.request);
   const shadowMode = params.config.routing.shadowMode;
 
-  // In shadow mode: always route to fallback_safe (Anthropic) but log the classifier decision
-  const activeRoute: RouteClass = shadowMode && classifiedRoute !== "tool_loop" && classifiedRoute !== "long_context" && classifiedRoute !== "fallback_safe"
-    ? "fallback_safe"
-    : classifiedRoute;
+  // In shadow mode: route cheap classes live (Groq/Cerebras work without Anthropic credits)
+  // but log what the classifier decided so shadow/stats shows real data.
+  // tool_loop / long_context / fallback_safe always go to Anthropic regardless of shadow mode.
+  const activeRoute: RouteClass = classifiedRoute;
 
   const candidates = routeCandidates(activeRoute, params.config);
+
+  // Cheap route classes strip tools before forwarding — don't let tool presence
+  // force selectCompatibleProvider back to Anthropic as a tool-capable fallback.
+  const CHEAP_ROUTES = new Set<RouteClass>(["planning", "code_draft", "summary"]);
+  const requestForProviderSelection = CHEAP_ROUTES.has(activeRoute)
+    ? { ...params.request, tools: undefined, toolChoice: undefined }
+    : params.request;
+
   const provider = selectCompatibleProvider(
     candidates,
-    params.request,
+    requestForProviderSelection,
     params.context.client,
     params.config.routing.experimentalModels,
   );
@@ -163,12 +171,10 @@ async function executeRequest(params: {
     params.cache.setPrefix(prefixKey, provider);
   }
 
-  // Compute shadow decision for cheap route classes so the event log shows projected savings
+  // In shadow mode, log what we routed and what it saved vs pure-Anthropic baseline
   let shadow: ShadowDecision | undefined;
-  if (shadowMode && activeRoute !== classifiedRoute) {
-    const shadowCandidates = routeCandidates(classifiedRoute, params.config);
-    const shadowProvider = shadowCandidates[0] ?? provider;
-    shadow = computeShadowDecision(params.request, classifiedRoute, shadowProvider);
+  if (shadowMode) {
+    shadow = computeShadowDecision(params.request, activeRoute, provider);
   }
 
   const result = await routeViaProviders(

@@ -81,7 +81,44 @@ export const anthropicMessagesAdapter: ClientAdapter<AnthropicMessagesRequest, A
     };
   },
 
-  fromLLMStream(stream: ReadableStream<string>): ReadableStream<Uint8Array> {
-    return textToSseStream("message", stream);
+  fromLLMStream(stream: ReadableStream<string>, _context: GatewayRequestContext): ReadableStream<Uint8Array> {
+    const encoder = new TextEncoder();
+    const msgId = `msg_${Date.now().toString(36)}`;
+
+    function sse(event: string, data: unknown): Uint8Array {
+      return encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    }
+
+    return new ReadableStream<Uint8Array>({
+      async start(controller) {
+        // message_start
+        controller.enqueue(sse("message_start", {
+          type: "message_start",
+          message: { id: msgId, type: "message", role: "assistant", content: [], model: "gateway-routed", stop_reason: null, stop_sequence: null, usage: { input_tokens: 0, output_tokens: 0 } },
+        }));
+        controller.enqueue(sse("content_block_start", { type: "content_block_start", index: 0, content_block: { type: "text", text: "" } }));
+        controller.enqueue(sse("ping", { type: "ping" }));
+
+        const reader = stream.getReader();
+        let outputTokens = 0;
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            if (value) {
+              controller.enqueue(sse("content_block_delta", { type: "content_block_delta", index: 0, delta: { type: "text_delta", text: value } }));
+              outputTokens += Math.ceil(value.length / 4);
+            }
+          }
+        } finally {
+          reader.releaseLock();
+        }
+
+        controller.enqueue(sse("content_block_stop", { type: "content_block_stop", index: 0 }));
+        controller.enqueue(sse("message_delta", { type: "message_delta", delta: { stop_reason: "end_turn", stop_sequence: null }, usage: { output_tokens: outputTokens } }));
+        controller.enqueue(sse("message_stop", { type: "message_stop" }));
+        controller.close();
+      },
+    });
   },
 };
