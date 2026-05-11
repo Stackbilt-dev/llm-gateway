@@ -8,6 +8,7 @@ import type {
 } from "@stackbilt/llm-providers";
 import { GatewayError } from "../errors.js";
 import { LLMMessage, LLMRequest, LLMResponse, RouteClass } from "../types.js";
+import { createCloudflareAiBinding } from "./cloudflare-ai-binding.js";
 
 const PROVIDER_NAMES: ProviderName[] = ["openai", "anthropic", "cloudflare", "cerebras", "groq"];
 
@@ -163,6 +164,7 @@ function detectConfiguredProvidersFromEnv(env: NodeJS.ProcessEnv): string[] {
   if (env.GROQ_API_KEY) configured.push("groq");
   if (env.CEREBRAS_API_KEY) configured.push("cerebras");
   if (env.AI) configured.push("cloudflare");
+  if (env.CLOUDFLARE_ACCOUNT_ID && env.CLOUDFLARE_API_TOKEN) configured.push("cloudflare");
 
   return configured;
 }
@@ -193,7 +195,20 @@ class GatewayProviderClient implements ProviderClient {
         },
       };
 
-      this.llm = providersModule.LLMProviders.fromEnv(process.env as Record<string, unknown>, {
+      const envForProviders: Record<string, unknown> = { ...(process.env as Record<string, unknown>) };
+      const hasCloudflareBinding = typeof envForProviders.AI === "object" && envForProviders.AI !== null;
+      const cloudflareAccountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+      const cloudflareApiToken = process.env.CLOUDFLARE_API_TOKEN;
+
+      if (!hasCloudflareBinding && cloudflareAccountId && cloudflareApiToken) {
+        envForProviders.AI = createCloudflareAiBinding({
+          accountId: cloudflareAccountId,
+          apiToken: cloudflareApiToken,
+          apiBaseUrl: process.env.CLOUDFLARE_API_BASE_URL,
+        });
+      }
+
+      this.llm = providersModule.LLMProviders.fromEnv(envForProviders, {
         defaultProvider: "auto",
         costOptimization: false,
         enableCircuitBreaker: true,
@@ -247,6 +262,17 @@ class GatewayProviderClient implements ProviderClient {
 
     const cheapProviders = new Set<ProviderName>(["groq", "cerebras", "cloudflare"]);
 
+    // Preferred model for each cheap provider — bypasses getProviderDefaultModel which
+    // optimizes for COST_EFFECTIVE and always picks llama-3.1-8b on Cerebras, ignoring
+    // the PAYG account's better models.
+    // Note: zai-glm-4.7 is a thinking/reasoning model — it exhausts short token budgets
+    // on internal reasoning before producing output, causing SCHEMA_DRIFT on cheap routes.
+    // qwen-3-235b is the right conversational model for PAYG Cerebras.
+    const preferredModel: Partial<Record<ProviderName, string>> = {
+      groq: "llama-3.3-70b-versatile",
+      cerebras: "qwen-3-235b-a22b-instruct-2507",
+    };
+
     // Strip tools BEFORE model override so getProviderDefaultModel infers BALANCED
     // (not TOOL_CALLING), which picks a text model rather than a tool-calling specialist.
     if (preferredProviderName && cheapProviders.has(preferredProviderName)) {
@@ -254,9 +280,14 @@ class GatewayProviderClient implements ProviderClient {
       providerRequest.toolChoice = undefined;
     }
 
-    if (preferredProviderName && (cheapProviders.has(preferredProviderName) || !providerRequest.model)) {
-      const providersModule = await loadProvidersModule();
-      providerRequest.model = providersModule.getProviderDefaultModel(preferredProviderName, providerRequest);
+    if (preferredProviderName && cheapProviders.has(preferredProviderName)) {
+      providerRequest.model = preferredModel[preferredProviderName]
+        ?? (await loadProvidersModule()).getProviderDefaultModel(preferredProviderName, providerRequest);
+    } else if (!providerRequest.model) {
+      providerRequest.model = (await loadProvidersModule()).getProviderDefaultModel(
+        preferredProviderName ?? "anthropic",
+        providerRequest,
+      );
     }
 
     return providerRequest;

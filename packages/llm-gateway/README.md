@@ -16,10 +16,18 @@ Local-first model routing gateway for Claude Code, Codex, and future coding-agen
 
 ## Quick Start
 
+From repo root:
+
 ```bash
-npm install
-npm run build
-node packages/llm-gateway/dist/cli.js start --port 8787
+npm run setup
+npm start
+```
+
+Launch through gateway in one command:
+
+```bash
+npm run claude
+npm run codex
 ```
 
 ## Config
@@ -35,4 +43,5 @@ The gateway loads config in this order:
 
 - The scaffold includes adapter, routing, telemetry, and cache boundaries.
 - `@stackbilt/llm-providers` integration is wired through `LLMProviders.fromEnv(process.env, ...)`.
+- Local Cloudflare Workers AI routing is supported via `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_API_TOKEN` (Node shim creates an `AI.run(...)` compatible binding).
 - If provider keys are missing, request handling returns a provider initialization error (503) so setup issues are visible immediately.

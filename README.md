@@ -33,6 +33,13 @@ Create `.env` at the repo root (already `.gitignore`d):
 CEREBRAS_API_KEY=csk-...
 GROQ_API_KEY=gsk_...
 
+# Optional: route through your own Cloudflare Workers AI account from local Node.
+# When these are set, the gateway builds an AI binding shim automatically.
+CLOUDFLARE_ACCOUNT_ID=...
+CLOUDFLARE_API_TOKEN=...
+# Optional override for API base (default: https://api.cloudflare.com/client/v4)
+# CLOUDFLARE_API_BASE_URL=https://api.cloudflare.com/client/v4
+
 # Optional: add your personal Anthropic key if you want tool_loop / long_context
 # turns to actually hit Anthropic instead of erroring.
 # Do NOT use the aegis-web worker key here — that account has no credits.
@@ -41,66 +48,68 @@ ANTHROPIC_API_KEY=sk-ant-...
 
 `STACKBILT_GATEWAY_KEY` defaults to `local-dev-key` if not set. Override it here if you want a stronger local auth secret.
 
-### 2. Install dependencies
+### 2. Bootstrap setup
 
 ```bash
-npm install
+npm run setup
 ```
 
 ---
 
-## Starting the gateway
+## One-command launch
 
 From the repo root:
 
 ```bash
-npm start            # foreground — logs stream to terminal
-npm run start:bg     # background
+npm run claude       # start gateway if needed, then launch Claude via gateway
+npm run codex        # start gateway if needed, then launch Codex via gateway
 ```
 
-Or directly:
+Gateway lifecycle commands:
 
 ```bash
-./start-gateway.sh
-./start-gateway.sh --port 9000    # custom port (default: 8787)
+npm start                        # gateway up
+npm run stop                     # gateway down
+npm run status                   # up/down + pid/log path
+npm run logs                     # tail gateway logs
+npm run doctor                   # validate cli/tools/env/provider setup
+npm run gateway -- restart       # restart
+npm run gateway -- up            # explicit up
+npm run gateway -- down          # explicit down
 ```
 
-Verify it's up:
+Direct script usage:
 
 ```bash
-curl http://localhost:8787/health
+./gateway.sh up
+./gateway.sh claude
+./gateway.sh codex
+```
+
+Optional environment overrides:
+
+```bash
+STACKBILT_GATEWAY_PORT=9000 npm run claude
+STACKBILT_GATEWAY_KEY=my-local-key npm run codex
+```
+
+Before first run, check setup (already included in `npm run setup`):
+
+```bash
+npm run doctor
 ```
 
 ---
 
-## Pointing Claude Code at the gateway
+## Manual env mode (optional)
 
-In any terminal where you launch Claude Code, set two environment variables:
+If you prefer manual terminal wiring instead of `npm run claude`:
 
 ```bash
 export ANTHROPIC_BASE_URL=http://localhost:8787
 export ANTHROPIC_API_KEY=local-dev-key
-```
-
-Then start Claude Code normally:
-
-```bash
 claude
 ```
-
-Claude Code now sends every request to the gateway instead of Anthropic directly. You do not need to change anything else — the gateway speaks the Anthropic Messages protocol.
-
-To stop proxying, unset the variable:
-
-```bash
-unset ANTHROPIC_BASE_URL
-```
-
-> **Shell tip**: add the two exports to a function in your `~/.bashrc` so you can toggle the gateway on/off in one command:
-> ```bash
-> gateway-on()  { export ANTHROPIC_BASE_URL=http://localhost:8787; export ANTHROPIC_API_KEY=local-dev-key; }
-> gateway-off() { unset ANTHROPIC_BASE_URL; unset ANTHROPIC_API_KEY; }
-> ```
 
 ---
 
@@ -229,6 +238,20 @@ Example `gateway.config.json` to flip shadow mode off and adjust routing:
     "routes": {
       "planning": ["groq", "cerebras"],
       "summary":  ["cerebras", "groq"]
+    }
+  }
+}
+```
+
+To prefer Cloudflare for low-cost classes:
+
+```json
+{
+  "routing": {
+    "routes": {
+      "planning": ["cloudflare", "groq", "cerebras"],
+      "code_draft": ["cloudflare", "groq", "cerebras"],
+      "summary": ["cloudflare", "cerebras", "groq"]
     }
   }
 }
