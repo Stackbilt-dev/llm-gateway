@@ -54,15 +54,34 @@ ANTHROPIC_API_KEY=sk-ant-...
 npm run setup
 ```
 
----
-
-## One-command launch
-
-From the repo root:
+### 3. Install global launcher (run once)
 
 ```bash
-npm run claude       # start gateway if needed, then launch Claude via gateway
-npm run codex        # start gateway if needed, then launch Codex via gateway
+npm run install:global
+```
+
+---
+
+## One-command launch (from any repo)
+
+From your project repo (any directory):
+
+```bash
+stackbilt-gw claude       # start gateway if needed, then launch Claude via gateway
+stackbilt-gw codex        # start gateway if needed, then launch Codex via gateway
+```
+
+First-time key setup (interactive prompts):
+
+```bash
+stackbilt-gw init
+```
+
+If you prefer local repo scripts (while in `llm-gateway`):
+
+```bash
+npm run claude
+npm run codex
 ```
 
 Gateway lifecycle commands:
@@ -73,6 +92,8 @@ npm run stop                     # gateway down
 npm run status                   # up/down + pid/log path
 npm run logs                     # tail gateway logs
 npm run doctor                   # validate cli/tools/env/provider setup
+npm run install:global           # install stackbilt-gw into ~/.local/bin
+npm run uninstall:global         # remove global launcher
 npm run gateway -- restart       # restart
 npm run gateway -- up            # explicit up
 npm run gateway -- down          # explicit down
@@ -82,6 +103,7 @@ Direct script usage:
 
 ```bash
 ./gateway.sh up
+./gateway.sh init
 ./gateway.sh claude
 ./gateway.sh codex
 ```
@@ -218,6 +240,57 @@ Returns:
 ```
 
 Use this at the end of a long session to extract what actually matters before starting a fresh context.
+
+---
+
+## Troubleshooting
+
+### `stackbilt-gw: command not found`
+
+Install the global launcher and ensure `~/.local/bin` is in your `PATH`:
+
+```bash
+npm run install:global
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+Persist the `PATH` line in `~/.bashrc` or `~/.zshrc`.
+
+### `doctor` fails with missing provider keys
+
+Run interactive setup:
+
+```bash
+stackbilt-gw init
+```
+
+This writes missing keys to `llm-gateway/.env`.
+
+### `claude` or `codex` binary not found
+
+Install the missing CLI, then re-run:
+
+```bash
+stackbilt-gw doctor
+```
+
+### Port 8787 already in use
+
+Use another port:
+
+```bash
+STACKBILT_GATEWAY_PORT=9000 stackbilt-gw claude
+```
+
+### Gateway appears stuck or unhealthy
+
+Check status/logs, then restart:
+
+```bash
+stackbilt-gw status
+stackbilt-gw logs
+stackbilt-gw restart
+```
 
 ---
 

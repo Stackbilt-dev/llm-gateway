@@ -20,14 +20,16 @@ From repo root:
 
 ```bash
 npm run setup
+npm run install:global
+stackbilt-gw init
 npm start
 ```
 
 Launch through gateway in one command:
 
 ```bash
-npm run claude
-npm run codex
+stackbilt-gw claude
+stackbilt-gw codex
 ```
 
 ## Config

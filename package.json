@@ -22,7 +22,9 @@
     "charter:setup": "charter setup --preset backend --ci github --yes",
     "verify:adf": "charter doctor --adf-only --ci --format json && charter adf evidence --auto-measure --ci --format json",
     "charter:doctor": "charter doctor --format json",
-    "charter:adf:bundle": "charter adf bundle --task \"describe task\" --format json"
+    "charter:adf:bundle": "charter adf bundle --task \"describe task\" --format json",
+    "install:global": "bash install-global.sh",
+    "uninstall:global": "bash uninstall-global.sh"
   },
   "devDependencies": {
     "@stackbilt/cli": "0.12.1"

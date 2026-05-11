@@ -8,11 +8,59 @@ LOG_FILE="${GATEWAY_LOG_FILE:-/tmp/llm-gateway.log}"
 PORT="${STACKBILT_GATEWAY_PORT:-8787}"
 GATEWAY_URL="http://localhost:${PORT}"
 GATEWAY_KEY="${STACKBILT_GATEWAY_KEY:-local-dev-key}"
+ENV_FILE="${SCRIPT_DIR}/.env"
 
 require_cmd() {
   if ! command -v "$1" >/dev/null 2>&1; then
     echo "[gateway] ERROR: missing required command: $1"
     exit 1
+  fi
+}
+
+load_env_if_present() {
+  if [[ -f "$ENV_FILE" ]]; then
+    set -a
+    # shellcheck disable=SC1090
+    source "$ENV_FILE"
+    set +a
+  fi
+}
+
+ensure_env_file() {
+  if [[ ! -f "$ENV_FILE" ]]; then
+    touch "$ENV_FILE"
+  fi
+}
+
+upsert_env_key() {
+  local key="$1"
+  local value="$2"
+  ensure_env_file
+  if grep -qE "^${key}=" "$ENV_FILE"; then
+    sed -i "s|^${key}=.*$|${key}=${value}|" "$ENV_FILE"
+  else
+    printf "%s=%s\n" "$key" "$value" >>"$ENV_FILE"
+  fi
+}
+
+prompt_key_if_missing() {
+  local key="$1"
+  local label="$2"
+  local current="${!key:-}"
+  if [[ -n "$current" ]]; then
+    echo "[init] ${key} already set"
+    return 0
+  fi
+
+  printf "%s (leave blank to skip): " "$label"
+  local value
+  read -r value
+  if [[ -n "$value" ]]; then
+    upsert_env_key "$key" "$value"
+    export "$key=$value"
+    echo "[init] saved ${key}"
+  else
+    echo "[init] skipped ${key}"
   fi
 }
 
@@ -127,12 +175,7 @@ doctor() {
 
   echo "[doctor] gateway quick checks"
 
-  if [[ -f "$SCRIPT_DIR/.env" ]]; then
-    set -a
-    # shellcheck disable=SC1090
-    source "$SCRIPT_DIR/.env"
-    set +a
-  fi
+  load_env_if_present
 
   if command -v node >/dev/null 2>&1; then
     echo "[ok] node found: $(node -v)"
@@ -155,10 +198,10 @@ doctor() {
     failures=$((failures + 1))
   fi
 
-  if [[ -f "$SCRIPT_DIR/.env" ]]; then
+  if [[ -f "$ENV_FILE" ]]; then
     echo "[ok] .env file found"
   else
-    echo "[fail] missing .env at $SCRIPT_DIR/.env"
+    echo "[fail] missing .env at $ENV_FILE"
     failures=$((failures + 1))
   fi
 
@@ -213,6 +256,24 @@ doctor() {
   fi
 }
 
+init() {
+  echo "[init] configuring gateway provider keys in ${ENV_FILE}"
+  load_env_if_present
+  ensure_env_file
+
+  prompt_key_if_missing "GROQ_API_KEY" "Groq API key"
+  prompt_key_if_missing "CEREBRAS_API_KEY" "Cerebras API key"
+  prompt_key_if_missing "ANTHROPIC_API_KEY" "Anthropic API key"
+  prompt_key_if_missing "OPENAI_API_KEY" "OpenAI API key"
+  prompt_key_if_missing "CLOUDFLARE_ACCOUNT_ID" "Cloudflare Account ID"
+  prompt_key_if_missing "CLOUDFLARE_API_TOKEN" "Cloudflare API Token"
+  prompt_key_if_missing "STACKBILT_GATEWAY_KEY" "Gateway local auth key (default: local-dev-key)"
+  prompt_key_if_missing "STACKBILT_GATEWAY_PORT" "Gateway port (default: 8787)"
+
+  echo "[init] running doctor..."
+  doctor
+}
+
 launch_claude() {
   require_cmd claude
   start_gateway
@@ -243,6 +304,7 @@ Usage:
   ./gateway.sh status
   ./gateway.sh logs
   ./gateway.sh doctor
+  ./gateway.sh init
   ./gateway.sh claude [claude args...]
   ./gateway.sh codex [codex args...]
 
@@ -268,6 +330,7 @@ case "$cmd" in
   status) status_gateway ;;
   logs) show_logs ;;
   doctor) doctor ;;
+  init) init ;;
   claude) launch_claude "$@" ;;
   codex) launch_codex "$@" ;;
   *)
