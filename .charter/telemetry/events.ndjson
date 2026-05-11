@@ -26,3 +26,6 @@
 {"version":1,"timestamp":"2026-05-06T21:08:47.163Z","commandPath":"adf.evidence","flags":["--auto-measure","--ci","--format"],"format":"json","ciMode":true,"durationMs":43,"exitCode":0,"success":true}
 {"version":1,"timestamp":"2026-05-11T21:12:13.096Z","commandPath":"doctor","flags":["--adf-only","--ci","--format"],"format":"json","ciMode":true,"durationMs":152,"exitCode":0,"success":true}
 {"version":1,"timestamp":"2026-05-11T21:12:32.007Z","commandPath":"adf.evidence","flags":["--auto-measure","--ci","--format"],"format":"json","ciMode":true,"durationMs":31,"exitCode":0,"success":true}
+{"version":1,"timestamp":"2026-05-11T21:13:13.585Z","commandPath":"adf.tidy","flags":["--dry-run","--format"],"format":"json","ciMode":false,"durationMs":75,"exitCode":0,"success":true}
+{"version":1,"timestamp":"2026-05-11T21:13:31.328Z","commandPath":"doctor","flags":["--adf-only","--ci","--format"],"format":"json","ciMode":true,"durationMs":150,"exitCode":0,"success":true}
+{"version":1,"timestamp":"2026-05-11T21:13:48.913Z","commandPath":"adf.evidence","flags":["--auto-measure","--ci","--format"],"format":"json","ciMode":true,"durationMs":40,"exitCode":0,"success":true}
